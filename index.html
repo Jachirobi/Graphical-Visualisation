@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interaktiv animierte Scheibe – Rennrad</title>
+  <meta name="description" content="Ein Rennrad, dessen Vorder- und Hinterrad sich unabhängig drehen – je 60 Einzelbilder in einem img-Element, ohne Canvas.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="bike-layout.css">
+</head>
+<body>
+  <a class="skip" href="#steuerung">Zur Steuerung springen</a>
+
+  <header class="intro">
+    <h1>Interaktiv animierte Scheibe</h1>
+    <p>Zwei Scheiben, ein Rennrad: Vorder- und Hinterrad bestehen aus je 60 Einzelbildern, die JavaScript in einem <code>&lt;img&gt;</code>-Element austauscht. Beide Räder lassen sich getrennt drehen. Kein Canvas, kein WebGL.</p>
+  </header>
+
+  <main>
+    <!-- ======================= Aufgabe: Scheiben ======================= -->
+    <section class="stage" aria-labelledby="h-rad">
+      <h2 id="h-rad">Das Rennrad</h2>
+
+      <figure class="bike-wrap">
+        <div class="bike" id="bike">
+          <span class="ground-shadow ground-shadow-rear" aria-hidden="true"></span>
+          <span class="ground-shadow ground-shadow-front" aria-hidden="true"></span>
+          <img id="wheel-rear" class="wheel wheel-rear" src="img/hinterrad/rad_00.webp"
+               width="600" height="600" alt="Hinterrad" draggable="false">
+          <img id="wheel-front" class="wheel wheel-front" src="img/vorderrad/rad_00.webp"
+               width="600" height="600" alt="Vorderrad" draggable="false">
+          <img id="frame" class="frame" src="img/rahmen.png" width="1600" height="973"
+               alt="" draggable="false">
+        </div>
+        <figcaption class="visually-hidden">Seitenansicht eines schwarzen Carbon-Rennrads, Fahrtrichtung nach rechts.</figcaption>
+      </figure>
+
+      <div class="wheel-status">
+        <p class="wheel-card" id="card-rear"><span class="wheel-name">Hinterrad</span> <span id="readout-rear" class="readout">0°, steht</span></p>
+        <p class="wheel-card" id="card-front"><span class="wheel-name">Vorderrad</span> <span id="readout-front" class="readout">0°, steht</span></p>
+      </div>
+
+      <div id="steuerung" class="panel">
+        <div class="select" role="radiogroup" aria-label="Welches Rad steuern?">
+          <span class="select-label" id="select-label">Steuern:</span>
+          <button type="button" class="seg" role="radio" aria-checked="false" data-target="rear" aria-keyshortcuts="1">Hinterrad <kbd>1</kbd></button>
+          <button type="button" class="seg" role="radio" aria-checked="false" data-target="front" aria-keyshortcuts="2">Vorderrad <kbd>2</kbd></button>
+          <button type="button" class="seg" role="radio" aria-checked="true" data-target="both" aria-keyshortcuts="3">Beide <kbd>3</kbd></button>
+        </div>
+
+        <div class="controls" role="group" aria-label="Ausgewählte Räder drehen">
+          <button type="button" id="btn-left" class="btn" disabled aria-keyshortcuts="L"
+                  title="Einen Schritt rückwärts drehen (Taste L)">
+            <span aria-hidden="true">↺</span> Links <kbd>L</kbd>
+          </button>
+          <button type="button" id="btn-auto" class="btn btn-primary" disabled aria-pressed="false"
+                  aria-keyshortcuts="A" title="Automatisch drehen ein/aus (Taste A)">
+            <span class="btn-auto-label">Automatisch drehen</span> <kbd>A</kbd>
+          </button>
+          <button type="button" id="btn-right" class="btn" disabled aria-keyshortcuts="R"
+                  title="Einen Schritt vorwärts drehen (Taste R)">
+            Rechts <kbd>R</kbd> <span aria-hidden="true">↻</span>
+          </button>
+        </div>
+
+        <div class="options">
+          <div class="speed">
+            <label for="speed">Drehgeschwindigkeit</label>
+            <input type="range" id="speed" min="5" max="60" step="1" value="24">
+            <output id="speed-value" for="speed">24 Bilder/s</output>
+          </div>
+          <label class="check"><input type="checkbox" id="toggle-frame" checked> Rahmen anzeigen</label>
+        </div>
+
+        <p id="status" class="status" role="status" aria-live="polite">Bilder werden geladen …</p>
+      </div>
+    </section>
+
+    <!-- ======================= Erweiterung 1: Hase ======================= -->
+    <section class="bunny-section" aria-labelledby="h-hase">
+      <h2 id="h-hase">Erweiterung: der hüpfende Hase</h2>
+      <p>Alle 12 Bewegungsphasen liegen nebeneinander in <em>einer</em> Bilddatei (Sprite-Sheet). Ein Fenster mit <code>overflow: hidden</code> zeigt immer nur einen Ausschnitt; JavaScript verschiebt das Bild darin.</p>
+
+      <div class="bunny-row">
+        <div class="bunny-viewport" aria-hidden="true">
+          <img id="bunny" src="img/hase_sprite.png" alt="" width="2640" height="220">
+        </div>
+        <div class="bunny-ctrl">
+          <button type="button" id="btn-bunny" class="btn" aria-pressed="true"
+                  aria-keyshortcuts="H" title="Hasen anhalten oder hüpfen lassen (Taste H)">
+            <span class="btn-bunny-label">Hasen anhalten</span> <kbd>H</kbd>
+          </button>
+          <p id="bunny-readout" class="readout">Phase 1 von 12</p>
+        </div>
+      </div>
+
+      <details class="sheet-details">
+        <summary>Ganzes Sprite-Sheet ansehen</summary>
+        <div class="sheet-scroll">
+          <div class="sheet">
+            <img src="img/hase_sprite.png" alt="Sprite-Sheet: 12 Phasen eines Hasensprungs nebeneinander" width="2640" height="220">
+            <span id="sheet-marker" class="sheet-marker" aria-hidden="true"></span>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ======================= Doku ======================= -->
+    <section class="doc" aria-labelledby="h-bedienung">
+      <h2 id="h-bedienung">Bedienung</h2>
+      <table class="keys">
+        <thead><tr><th scope="col">Taste</th><th scope="col">Wirkung</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td><td>Hinterrad, Vorderrad oder beide auswählen. Ein Klick auf ein Rad wählt es ebenfalls aus.</td></tr>
+          <tr><td><kbd>L</kbd></td><td>Ausgewählte Räder einen Schritt (6°) nach links drehen, also rückwärts. Für weiteres Drehen erneut drücken.</td></tr>
+          <tr><td><kbd>R</kbd></td><td>Ausgewählte Räder einen Schritt (6°) nach rechts drehen, also vorwärts.</td></tr>
+          <tr><td><kbd>A</kbd></td><td>Automatische Drehung der ausgewählten Räder starten bzw. anhalten. Während sie läuft, ändern <kbd>L</kbd>/<kbd>R</kbd> die Richtung.</td></tr>
+          <tr><td><kbd>H</kbd></td><td>Hasen anhalten bzw. weiterhüpfen lassen.</td></tr>
+        </tbody>
+      </table>
+      <p>Alle Funktionen gibt es auch als Schaltflächen. Gedrückt gehaltene Tasten wiederholen den Schritt bewusst nicht. Beispiel für unabhängiges Drehen: <kbd>1</kbd>, <kbd>A</kbd> (Hinterrad läuft), dann <kbd>2</kbd> und mehrmals <kbd>L</kbd> (Vorderrad schrittweise rückwärts).</p>
+    </section>
+
+    <section class="doc" aria-labelledby="h-technik">
+      <h2 id="h-technik">Umsetzung</h2>
+      <p><strong>Räder:</strong> je 60 WebP-Dateien (0°, 6°, …, 354°). <code>app.js</code> lädt alle 120 Bilder vorab mit <code>new Image()</code> und <code>decode()</code> und tauscht danach nur noch das <code>src</code>-Attribut der beiden <code>&lt;img&gt;</code>-Elemente. Jedes Rad hat einen eigenen Zustand (Bild, Richtung, Automatik).</p>
+      <p><strong>Warum 6°-Schritte?</strong> Beide Räder haben 24 Speichen; das Speichenbild wiederholt sich also alle 15°. Bei 15°-Schritten sähen alle Frames bis auf Logo und Ventil gleich aus, bei 10° liefen die Speichen scheinbar rückwärts (Wagenrad-Effekt). 6° liegt unter der halben Periode von 7,5°, dadurch drehen Speichen, Logo und Ventil sichtbar in dieselbe Richtung.</p>
+      <p><strong>Ebenen:</strong> Unten liegen Bodenschatten und die beiden Räder, darüber der Rahmen als transparentes PNG. Gabel, Streben, Kette und Steckachsen verdecken so die Räder wie in echt, ohne dass etwas ausgeschnitten werden muss. Steckachsen und Bremssättel stehen fest, nur die Räder drehen sich.</p>
+      <p><strong>Bildaufbereitung</strong> (<code>tools/generate_assets.py</code>): Das Skript findet die Reifenkante per Kreis-Fit und die Nabenmitte über Rotationssymmetrie. Beim Hinterrad saß die Nabe im Ausgangsbild 9 px neben der Reifenmitte; ohne Korrektur hätte das Rad beim Drehen geeiert. Der Nabenbereich wird deshalb verschoben und weich in die Speichen übergeblendet. Danach wird der weiße Hintergrund zwischen den Speichen transparent gemacht und jedes Frame gedreht. Die Positionen der Räder schreibt das Skript aus derselben Rahmengeometrie in <code>bike-layout.css</code> (Angaben in Prozent, daher auch auf kleinen Bildschirmen passgenau).</p>
+      <p><strong>Hase:</strong> ein Sprite-Sheet mit 12 Bildern à 220 × 220 px mit Squash &amp; Stretch, nachziehenden Ohren und einem Schatten, der mit der Höhe schrumpft.</p>
+      <p><strong>Animation:</strong> eine gemeinsame <code>requestAnimationFrame</code>-Schleife mit zeitbasierter Bildrate, damit die Geschwindigkeit auf 60-Hz- und 120-Hz-Displays gleich ist.</p>
+    </section>
+
+    <section class="doc" aria-labelledby="h-hci">
+      <h2 id="h-hci">Gebrauchstauglichkeit (ISO 9241-11 / -110)</h2>
+      <dl class="hci">
+        <dt>Aufgabenangemessenheit</dt>
+        <dd>Die geforderten Tasten L, R und A behalten ihre Bedeutung; welches Rad sie betreffen, legt eine einzige Auswahl fest. Voreinstellung „Beide“, damit sich ohne Vorwissen sofort etwas dreht.</dd>
+        <dt>Selbstbeschreibungsfähigkeit</dt>
+        <dd>Jede Schaltfläche zeigt ihre Taste. Ausgewählte Räder leuchten, Winkel und Zustand beider Räder werden laufend angezeigt.</dd>
+        <dt>Erwartungskonformität</dt>
+        <dd>Rechts dreht im Uhrzeigersinn, also vorwärts in Fahrtrichtung. Kürzel mit <kbd>Cmd</kbd>/<kbd>Strg</kbd> (z. B. <kbd>Cmd</kbd>+<kbd>R</kbd>) bleiben dem Browser vorbehalten.</dd>
+        <dt>Steuerbarkeit</dt>
+        <dd>Räder einzeln oder gemeinsam, Automatik jederzeit anhaltbar, Geschwindigkeit einstellbar, Rahmen ausblendbar. Der Hase lässt sich stoppen und startet bei „Bewegung reduzieren“ nicht von selbst.</dd>
+        <dt>Fehlertoleranz / Robustheit</dt>
+        <dd>Bedienelemente sind erst aktiv, wenn alle Bilder geladen sind; ein Fortschritt wird angezeigt. Fehlt eine Datei, nennt die Seite sie beim Namen. Gehaltene Tasten erzeugen keine ungewollte Schrittfolge.</dd>
+        <dt>Lernförderlichkeit &amp; Zugänglichkeit</dt>
+        <dd>Kurze Bedienhilfe mit Beispiel auf der Seite, sichtbarer Tastaturfokus, Auswahl als Radio-Gruppe für Screenreader, Statusmeldungen über eine Live-Region.</dd>
+      </dl>
+    </section>
+
+    <section class="doc" aria-labelledby="h-qa">
+      <h2 id="h-qa">Test und Qualitätssicherung</h2>
+      <p>Getestet in Chrome unter macOS: alle Tasten und Schaltflächen, Auswahl einzelner Räder per Taste und Klick, beide Räder gleichzeitig in Gegenrichtung, Richtungswechsel während der Automatik, gedrückt gehaltene Tasten, Tab-Wechsel, schmales Browserfenster. Die Konsole (<kbd>Cmd</kbd>+<kbd>Alt</kbd>+<kbd>J</kbd>) zeigt nach dem Laden nur eine Info-Meldung und keine Fehler.</p>
+    </section>
+
+    <section class="doc" aria-labelledby="h-quellen">
+      <h2 id="h-quellen">Quellen</h2>
+      <ul class="sources">
+        <li><strong>Ausgangsbilder Laufräder:</strong> KI-generiert mit ChatGPT (OpenAI) am TT.MM.JJJJ, Prompt: „PROMPT-EINTRAGEN“. Originale: <a href="img/quelle/Vorderrad.png"><code>Vorderrad.png</code></a>, <a href="img/quelle/Hinterrad.png"><code>Hinterrad.png</code></a>. Die abgebildeten Schriftzüge „Zipp“ und „Continental Grand Prix 5000“ sind Marken der jeweiligen Inhaber; es besteht keine Verbindung zu den Herstellern. Verwendung ausschließlich zu Studienzwecken.</li>
+        <li><strong>Einzelbilder der Räder</strong> (Freistellung, Nabenkorrektur, 60 Rotationsstufen), <strong>Rahmen</strong> und <strong>Hase</strong>: selbst erstellt mit dem Python-Skript <a href="tools/generate_assets.py"><code>tools/generate_assets.py</code></a> (Pillow, NumPy, SciPy).</li>
+        <li><strong>Schrift:</strong> Bricolage Grotesque, Mathieu Triay, SIL Open Font License, über <a href="https://fonts.google.com/specimen/Bricolage+Grotesque">Google Fonts</a>.</li>
+        <li><strong>Referenzen:</strong> <a href="https://developer.mozilla.org/de/docs/Web/API/Window/requestAnimationFrame">MDN: requestAnimationFrame</a>, <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/decode">MDN: HTMLImageElement.decode()</a>, <a href="https://developer.mozilla.org/de/docs/Web/API/KeyboardEvent">MDN: KeyboardEvent</a>, <a href="https://www.w3.org/WAI/ARIA/apg/patterns/radio/">WAI-ARIA: Radio Group Pattern</a>, ISO 9241-11:2018 und ISO 9241-110:2020.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>Tommy, M.Sc. Medieninformatik, BHT Berlin</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
