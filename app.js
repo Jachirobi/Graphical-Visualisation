@@ -30,6 +30,10 @@
   const toggleFrame = $("toggle-frame");
   const frameImg = $("frame");
   const status = $("status");
+  const toggleShortcuts = $("toggle-shortcuts");
+  const themeSwitch = $("theme-switch");
+  const loadWrap = $("load-wrap");
+  const loadProgress = $("load-progress");
 
   const bunny = $("bunny");
   const btnBunny = $("btn-bunny");
@@ -69,6 +73,7 @@
     bunnyAcc: 0,
     lastTime: null,
     rafId: null,
+    shortcuts: true,
   };
 
   const selectedWheels = () =>
@@ -91,11 +96,12 @@
   async function preload() {
     const urls = [...wheels.rear.urls, ...wheels.front.urls, frameImg.getAttribute("src"), bunny.getAttribute("src")];
     let loaded = 0;
+    loadProgress.max = urls.length;
+    // Fortschritt über <progress> statt Live-Region: Screenreader werden nicht mit Zwischenständen überflutet
     const progress = () => {
       loaded += 1;
-      if (loaded % 6 === 0 || loaded === urls.length) {
-        setStatus(`Bilder werden geladen … ${loaded} von ${urls.length}`);
-      }
+      loadProgress.value = loaded;
+      loadProgress.textContent = `${Math.round((loaded / urls.length) * 100)} %`;
     };
     const results = await Promise.allSettled(urls.map((u) => loadImage(u, progress)));
     const failed = results.filter((r) => r.status === "rejected");
@@ -113,7 +119,11 @@
   }
 
   function renderSelection() {
-    segButtons.forEach((b) => b.setAttribute("aria-checked", String(b.dataset.target === state.selection)));
+    segButtons.forEach((b) => {
+      const on = b.dataset.target === state.selection;
+      b.setAttribute("aria-checked", String(on));
+      b.tabIndex = on ? 0 : -1;               // Radio-Gruppe: nur die gewählte Option ist ein Tab-Stopp
+    });
     const sel = selectedWheels();
     Object.values(wheels).forEach((w) => {
       const on = sel.includes(w);
@@ -257,6 +267,52 @@
   speed.addEventListener("input", () => {
     state.fps = Number(speed.value);
     speedValue.textContent = `${state.fps} Bilder/s`;
+    speed.setAttribute("aria-valuetext", `${state.fps} Bilder pro Sekunde`);
+  });
+
+  // ------------------------------------------------------------ Einstellungen speichern
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* privater Modus o. Ä. */ } },
+  };
+
+  // ------------------------------------------------------------ Helles / dunkles Design
+  const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    themeSwitch.setAttribute("aria-checked", String(theme === "dark"));
+  }
+
+  applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
+
+  themeSwitch.addEventListener("click", () => {
+    const next = themeSwitch.getAttribute("aria-checked") === "true" ? "light" : "dark";
+    applyTheme(next);
+    store.set("theme", next);
+  });
+
+  // Folgt der Systemeinstellung, solange man nicht selbst umgeschaltet hat
+  darkQuery.addEventListener("change", (e) => {
+    if (!store.get("theme")) applyTheme(e.matches ? "dark" : "light");
+  });
+
+  // ------------------------------------------------------------ Tastenkürzel an/aus (WCAG 2.1.4)
+  const shortcutEls = [...document.querySelectorAll("[aria-keyshortcuts]")];
+  shortcutEls.forEach((el) => (el.dataset.keys = el.getAttribute("aria-keyshortcuts")));
+
+  function setShortcuts(on) {
+    state.shortcuts = on;
+    toggleShortcuts.checked = on;
+    document.body.classList.toggle("shortcuts-off", !on);
+    shortcutEls.forEach((el) => (on ? el.setAttribute("aria-keyshortcuts", el.dataset.keys) : el.removeAttribute("aria-keyshortcuts")));
+  }
+
+  setShortcuts(store.get("shortcuts") !== "off");
+  toggleShortcuts.addEventListener("change", () => {
+    setShortcuts(toggleShortcuts.checked);
+    store.set("shortcuts", toggleShortcuts.checked ? "on" : "off");
+    setStatus(toggleShortcuts.checked ? "Tastenkürzel eingeschaltet." : "Tastenkürzel ausgeschaltet. Bedienung über die Schaltflächen.");
   });
 
   toggleFrame.addEventListener("change", () => {
@@ -267,6 +323,7 @@
   const KEY_TARGET = { 1: "rear", 2: "front", 3: "both" };
 
   document.addEventListener("keydown", (e) => {
+    if (!state.shortcuts) return;
     // Browser-/System-Kürzel (Cmd+R, Strg+L, …) nicht abfangen
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.target.closest("input[type=text], textarea, [contenteditable=true]")) return;
@@ -296,10 +353,14 @@
       state.ready = true;
       [btnLeft, btnRight, btnAuto].forEach((b) => (b.disabled = false));
       Object.values(wheels).forEach(renderWheel);
-      setStatus("Bereit. Rad wählen mit 1, 2, 3 – drehen mit L und R, automatisch mit A.");
+      loadWrap.hidden = true;
+      setStatus(state.shortcuts
+        ? "Bereit. Rad wählen mit 1, 2, 3 – drehen mit L und R, automatisch mit A."
+        : "Bereit. Bedienung über die Schaltflächen.");
       console.info(`Rennrad: ${FRAMES * 2} Rad-Bilder, Rahmen und Hasen-Sprite-Sheet geladen.`);
     } catch (err) {
       console.error(err);
+      loadWrap.hidden = true;
       setStatus(`${err.message}. Prüfen Sie, ob der Ordner img/ vollständig auf den Server hochgeladen wurde.`, true);
     }
   }
