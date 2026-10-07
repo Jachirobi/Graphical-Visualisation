@@ -3,6 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    // Design vor dem ersten Zeichnen setzen (kein Aufblitzen des hellen Designs)
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem("theme"); } catch (e) {}
+      if (t !== "dark" && t !== "light") {
+        t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
   <title>Interaktiv animierte Scheibe – Rennrad</title>
   <meta name="description" content="Ein Rennrad, dessen Vorder- und Hinterrad sich unabhängig drehen – je 60 Einzelbilder in einem img-Element, ohne Canvas.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,9 +26,18 @@
 <body>
   <a class="skip" href="#steuerung">Zur Steuerung springen</a>
 
-  <header class="intro">
+  <header>
+  <div class="topbar">
+    <button type="button" id="theme-switch" class="theme-switch" role="switch" aria-checked="false">
+      <span class="track" aria-hidden="true"><span class="thumb"></span></span>
+      <span>Dunkles Design</span>
+    </button>
+  </div>
+
+  <div class="intro">
     <h1>Interaktiv animierte Scheibe</h1>
     <p>Zwei Scheiben, ein Rennrad: Vorder- und Hinterrad bestehen aus je 60 Einzelbildern, die JavaScript in einem <code>&lt;img&gt;</code>-Element austauscht. Beide Räder lassen sich getrennt drehen. Kein Canvas, kein WebGL.</p>
+  </div>
   </header>
 
   <main>
@@ -38,44 +59,52 @@
         <figcaption class="visually-hidden">Seitenansicht eines schwarzen Carbon-Rennrads, Fahrtrichtung nach rechts.</figcaption>
       </figure>
 
-      <div class="wheel-status">
-        <p class="wheel-card" id="card-rear"><span class="wheel-name">Hinterrad</span> <span id="readout-rear" class="readout">0°, steht</span></p>
-        <p class="wheel-card" id="card-front"><span class="wheel-name">Vorderrad</span> <span id="readout-front" class="readout">0°, steht</span></p>
-      </div>
+      <ul class="wheel-status" aria-label="Zustand der Räder">
+        <li class="wheel-card" id="card-rear"><span class="wheel-name">Hinterrad:</span> <span id="readout-rear" class="readout">0°, steht</span></li>
+        <li class="wheel-card" id="card-front"><span class="wheel-name">Vorderrad:</span> <span id="readout-front" class="readout">0°, steht</span></li>
+      </ul>
 
-      <div id="steuerung" class="panel">
-        <div class="select" role="radiogroup" aria-label="Welches Rad steuern?">
-          <span class="select-label" id="select-label">Steuern:</span>
-          <button type="button" class="seg" role="radio" aria-checked="false" data-target="rear" aria-keyshortcuts="1">Hinterrad <kbd>1</kbd></button>
-          <button type="button" class="seg" role="radio" aria-checked="false" data-target="front" aria-keyshortcuts="2">Vorderrad <kbd>2</kbd></button>
-          <button type="button" class="seg" role="radio" aria-checked="true" data-target="both" aria-keyshortcuts="3">Beide <kbd>3</kbd></button>
+      <div id="steuerung" class="panel" tabindex="-1">
+        <h3 class="visually-hidden">Steuerung</h3>
+        <div class="select" role="radiogroup" aria-labelledby="select-label">
+          <span class="select-label" id="select-label">Rad wählen:</span>
+          <button type="button" class="seg" role="radio" aria-checked="false" tabindex="-1" data-target="rear" aria-keyshortcuts="1">Hinterrad <kbd aria-hidden="true">1</kbd></button>
+          <button type="button" class="seg" role="radio" aria-checked="false" tabindex="-1" data-target="front" aria-keyshortcuts="2">Vorderrad <kbd aria-hidden="true">2</kbd></button>
+          <button type="button" class="seg" role="radio" aria-checked="true" tabindex="0" data-target="both" aria-keyshortcuts="3">Beide <kbd aria-hidden="true">3</kbd></button>
         </div>
 
         <div class="controls" role="group" aria-label="Ausgewählte Räder drehen">
           <button type="button" id="btn-left" class="btn" disabled aria-keyshortcuts="L"
                   title="Einen Schritt rückwärts drehen (Taste L)">
-            <span aria-hidden="true">↺</span> Links <kbd>L</kbd>
+            <span aria-hidden="true">↺</span> Links <kbd aria-hidden="true">L</kbd>
           </button>
           <button type="button" id="btn-auto" class="btn btn-primary" disabled aria-pressed="false"
                   aria-keyshortcuts="A" title="Automatisch drehen ein/aus (Taste A)">
-            <span class="btn-auto-label">Automatisch drehen</span> <kbd>A</kbd>
+            <span class="btn-auto-label">Automatisch drehen</span> <kbd aria-hidden="true">A</kbd>
           </button>
           <button type="button" id="btn-right" class="btn" disabled aria-keyshortcuts="R"
                   title="Einen Schritt vorwärts drehen (Taste R)">
-            Rechts <kbd>R</kbd> <span aria-hidden="true">↻</span>
+            Rechts <kbd aria-hidden="true">R</kbd> <span aria-hidden="true">↻</span>
           </button>
         </div>
 
         <div class="options">
           <div class="speed">
             <label for="speed">Drehgeschwindigkeit</label>
-            <input type="range" id="speed" min="5" max="60" step="1" value="24">
+            <input type="range" id="speed" min="5" max="60" step="1" value="24" aria-valuetext="24 Bilder pro Sekunde">
             <output id="speed-value" for="speed">24 Bilder/s</output>
           </div>
           <label class="check"><input type="checkbox" id="toggle-frame" checked> Rahmen anzeigen</label>
+          <label class="check"><input type="checkbox" id="toggle-shortcuts" checked aria-describedby="shortcuts-hint"> Tastenkürzel aktiv</label>
+        </div>
+        <p id="shortcuts-hint" class="visually-hidden">Einzeltasten-Kürzel 1, 2, 3, L, R, A und H. Abschalten, wenn sie mit Spracheingabe oder anderen Hilfsmitteln kollidieren.</p>
+
+        <div id="load-wrap" class="load">
+          <label for="load-progress">Bilder werden geladen</label>
+          <progress id="load-progress" max="122" value="0">0 %</progress>
         </div>
 
-        <p id="status" class="status" role="status" aria-live="polite">Bilder werden geladen …</p>
+        <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
       </div>
     </section>
 
@@ -91,7 +120,7 @@
         <div class="bunny-ctrl">
           <button type="button" id="btn-bunny" class="btn" aria-pressed="true"
                   aria-keyshortcuts="H" title="Hasen anhalten oder hüpfen lassen (Taste H)">
-            <span class="btn-bunny-label">Hasen anhalten</span> <kbd>H</kbd>
+            <span class="btn-bunny-label">Hasen anhalten</span> <kbd aria-hidden="true">H</kbd>
           </button>
           <p id="bunny-readout" class="readout">Phase 1 von 12</p>
         </div>
@@ -111,17 +140,20 @@
     <!-- ======================= Doku ======================= -->
     <section class="doc" aria-labelledby="h-bedienung">
       <h2 id="h-bedienung">Bedienung</h2>
+      <div class="table-scroll">
       <table class="keys">
+        <caption>Tastenkürzel (abschaltbar über „Tastenkürzel aktiv“)</caption>
         <thead><tr><th scope="col">Taste</th><th scope="col">Wirkung</th></tr></thead>
         <tbody>
-          <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td><td>Hinterrad, Vorderrad oder beide auswählen. Ein Klick auf ein Rad wählt es ebenfalls aus.</td></tr>
+          <tr><td><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></td><td>Hinterrad, Vorderrad oder beide auswählen. In der Auswahlgruppe gehen auch die Pfeiltasten; ein Klick auf ein Rad wählt es ebenfalls aus.</td></tr>
           <tr><td><kbd>L</kbd></td><td>Ausgewählte Räder einen Schritt (6°) nach links drehen, also rückwärts. Für weiteres Drehen erneut drücken.</td></tr>
           <tr><td><kbd>R</kbd></td><td>Ausgewählte Räder einen Schritt (6°) nach rechts drehen, also vorwärts.</td></tr>
           <tr><td><kbd>A</kbd></td><td>Automatische Drehung der ausgewählten Räder starten bzw. anhalten. Während sie läuft, ändern <kbd>L</kbd>/<kbd>R</kbd> die Richtung.</td></tr>
           <tr><td><kbd>H</kbd></td><td>Hasen anhalten bzw. weiterhüpfen lassen.</td></tr>
         </tbody>
       </table>
-      <p>Alle Funktionen gibt es auch als Schaltflächen. Gedrückt gehaltene Tasten wiederholen den Schritt bewusst nicht. Beispiel für unabhängiges Drehen: <kbd>1</kbd>, <kbd>A</kbd> (Hinterrad läuft), dann <kbd>2</kbd> und mehrmals <kbd>L</kbd> (Vorderrad schrittweise rückwärts).</p>
+      </div>
+      <p>Alle Funktionen gibt es auch als Schaltflächen, erreichbar mit <kbd>Tab</kbd>. Gedrückt gehaltene Tasten wiederholen den Schritt bewusst nicht. Beispiel für unabhängiges Drehen: <kbd>1</kbd>, <kbd>A</kbd> (Hinterrad läuft), dann <kbd>2</kbd> und mehrmals <kbd>L</kbd> (Vorderrad schrittweise rückwärts).</p>
     </section>
 
     <section class="doc" aria-labelledby="h-technik">
@@ -152,9 +184,31 @@
       </dl>
     </section>
 
+    <section class="doc" aria-labelledby="h-a11y">
+      <h2 id="h-a11y">Barrierefreiheit (WCAG 2.2, Stufe AA)</h2>
+      <dl class="hci">
+        <dt>Tastatur</dt>
+        <dd>Alles ist ohne Maus bedienbar, die Reihenfolge folgt dem Lesefluss. Die Radauswahl ist eine Radio-Gruppe mit einem Tab-Stopp und Pfeiltasten. Ein „Zur Steuerung springen“-Link führt direkt zu den Bedienelementen (2.1.1, 2.4.1, 2.4.3).</dd>
+        <dt>Einzeltasten-Kürzel</dt>
+        <dd>Die Kürzel sind über „Tastenkürzel aktiv“ abschaltbar, damit Spracheingabe nicht versehentlich Aktionen auslöst. Mit <kbd>Cmd</kbd>/<kbd>Strg</kbd>/<kbd>Alt</kbd> kombinierte Tasten bleiben dem Browser (2.1.4).</dd>
+        <dt>Fokus</dt>
+        <dd>Deutlich sichtbarer Fokusrahmen mit Kontrast über 3:1 in beiden Designs, nie von anderen Elementen verdeckt (2.4.7, 2.4.11).</dd>
+        <dt>Kontrast und Farbe</dt>
+        <dd>Texte mindestens 4,5:1, Konturen von Bedienelementen und Auswahlringe mindestens 3:1 – im hellen und im dunklen Design nachgemessen. Zustände sind nie nur farblich erkennbar: Haken in der Auswahl, Beschriftungswechsel beim Auto-Button, Textstatus je Rad (1.4.1, 1.4.3, 1.4.11).</dd>
+        <dt>Helles und dunkles Design</dt>
+        <dd>Startet passend zur Systemeinstellung, lässt sich oben rechts umschalten und wird gespeichert. Der Schalter ist als <code>role="switch"</code> ausgezeichnet. Im Windows-Kontrastmodus bleiben Auswahl und Fokus sichtbar.</dd>
+        <dt>Bewegung</dt>
+        <dd>Die Räder bewegen sich nur auf Befehl. Der automatisch hüpfende Hase lässt sich anhalten und startet bei „Bewegung reduzieren“ nicht von selbst; Übergänge entfallen dann ebenfalls. Kein Blinken (2.2.2, 2.3.1, 2.3.3).</dd>
+        <dt>Screenreader</dt>
+        <dd>Sprache Deutsch, sinnvolle Überschriften-Hierarchie und Landmarks, Alternativtexte bzw. dekorative Bilder ausgeblendet, Statusmeldungen über eine Live-Region, Ladefortschritt als <code>&lt;progress&gt;</code>, Schieberegler mit gesprochenem Wert (1.1.1, 1.3.1, 3.1.1, 4.1.2, 4.1.3).</dd>
+        <dt>Größe und Zoom</dt>
+        <dd>Schriftgrößen in <code>rem</code>, Layout funktioniert bis 400 % Zoom bzw. 320 px Breite ohne waagerechtes Scrollen der Seite; Trefferflächen mindestens 44 × 44 px (1.4.4, 1.4.10, 2.5.8).</dd>
+      </dl>
+    </section>
+
     <section class="doc" aria-labelledby="h-qa">
       <h2 id="h-qa">Test und Qualitätssicherung</h2>
-      <p>Getestet in Chrome unter macOS: alle Tasten und Schaltflächen, Auswahl einzelner Räder per Taste und Klick, beide Räder gleichzeitig in Gegenrichtung, Richtungswechsel während der Automatik, gedrückt gehaltene Tasten, Tab-Wechsel, schmales Browserfenster. Die Konsole (<kbd>Cmd</kbd>+<kbd>Alt</kbd>+<kbd>J</kbd>) zeigt nach dem Laden nur eine Info-Meldung und keine Fehler.</p>
+      <p>Getestet in Chrome unter macOS, zusätzlich mit VoiceOver (<kbd>Cmd</kbd>+<kbd>F5</kbd>), nur mit Tastatur, bei 200 %/400 % Zoom und in beiden Designs: alle Tasten und Schaltflächen, Auswahl einzelner Räder per Taste und Klick, beide Räder gleichzeitig in Gegenrichtung, Richtungswechsel während der Automatik, gedrückt gehaltene Tasten, Tab-Wechsel, schmales Browserfenster. Die Konsole (<kbd>Cmd</kbd>+<kbd>Alt</kbd>+<kbd>J</kbd>) zeigt nach dem Laden nur eine Info-Meldung und keine Fehler.</p>
     </section>
 
     <section class="doc" aria-labelledby="h-quellen">
