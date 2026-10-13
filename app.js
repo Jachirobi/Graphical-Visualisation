@@ -8,7 +8,7 @@
 (() => {
   "use strict";
 
-  // ------------------------------------------------------------ Konfiguration
+  // Konfiguration
   const FRAMES = 60;
   const DEG_PER_FRAME = 360 / FRAMES;            // 6°
   const frameUrls = (dir) =>
@@ -18,7 +18,7 @@
   const BUNNY_FRAME_PX = 220;
   const BUNNY_FPS = 12;
 
-  // ------------------------------------------------------------ DOM
+  // DOM
   const $ = (id) => document.getElementById(id);
   const btnLeft = $("btn-left");
   const btnRight = $("btn-right");
@@ -43,7 +43,7 @@
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // ------------------------------------------------------------ Räder
+  // Räder
   function createWheel(key, name, dir) {
     return {
       key,
@@ -80,7 +80,7 @@
     state.selection === "both" ? [wheels.rear, wheels.front] : [wheels[state.selection]];
   const dirWord = (d) => (d > 0 ? "vorwärts" : "rückwärts");
 
-  // ------------------------------------------------------------ Bilder laden
+  // Bilder laden
   function loadImage(url, onDone) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -111,7 +111,7 @@
     }
   }
 
-  // ------------------------------------------------------------ Darstellung
+  // Darstellung
   function renderWheel(w) {
     w.img.src = w.urls[w.index];
     const angle = w.index * DEG_PER_FRAME;
@@ -136,7 +136,7 @@
     btnAutoLabel.textContent = anyAuto ? "Drehung anhalten" : "Automatisch drehen";
   }
 
-  // ------------------------------------------------------------ Aktionen
+  // Aktionen
   function select(target) {
     state.selection = target;
     renderSelection();
@@ -174,7 +174,7 @@
     ensureLoop();
   }
 
-  // ------------------------------------------------------------ Hase
+  // Hase
   function renderBunny() {
     bunny.style.transform = `translateX(${-state.bunnyIndex * BUNNY_FRAME_PX}px)`;
     sheetMarker.style.transform = `translateX(${state.bunnyIndex * (BUNNY_FRAME_PX / 2)}px)`;
@@ -189,7 +189,7 @@
     ensureLoop();
   }
 
-  // ------------------------------------------------------------ Animationsschleife
+  // Animationsschleife
   const anyRunning = () => wheels.rear.auto || wheels.front.auto || state.bunnyPlaying;
 
   function ensureLoop() {
@@ -234,7 +234,7 @@
     state.rafId = anyRunning() ? requestAnimationFrame(tick) : null;
   }
 
-  // ------------------------------------------------------------ Hilfen
+  // Hilfen
   function setStatus(text, isError = false) {
     status.textContent = text;
     status.classList.toggle("is-error", isError);
@@ -245,7 +245,7 @@
     setTimeout(() => btn.classList.remove("is-flash"), 120);
   }
 
-  // ------------------------------------------------------------ Eingaben
+  // Eingaben
   btnLeft.addEventListener("click", () => rotate(-1));
   btnRight.addEventListener("click", () => rotate(1));
   btnAuto.addEventListener("click", toggleAuto);
@@ -270,13 +270,13 @@
     speed.setAttribute("aria-valuetext", `${state.fps} Bilder pro Sekunde`);
   });
 
-  // ------------------------------------------------------------ Einstellungen speichern
+  // Einstellungen speichern
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* privater Modus o. Ä. */ } },
   };
 
-  // ------------------------------------------------------------ Helles / dunkles Design
+  // Helles / dunkles Design
   const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
   function applyTheme(theme) {
@@ -297,7 +297,7 @@
     if (!store.get("theme")) applyTheme(e.matches ? "dark" : "light");
   });
 
-  // ------------------------------------------------------------ Tastenkürzel an/aus (WCAG 2.1.4)
+  // Tastenkürzel an/aus (WCAG 2.1.4)
   const shortcutEls = [...document.querySelectorAll("[aria-keyshortcuts]")];
   shortcutEls.forEach((el) => (el.dataset.keys = el.getAttribute("aria-keyshortcuts")));
 
@@ -343,7 +343,7 @@
     }
   });
 
-  // ------------------------------------------------------------ Start
+  // Start
   async function init() {
     setBunny(state.bunnyPlaying);
     renderBunny();
